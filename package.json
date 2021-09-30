@@ -4,6 +4,7 @@
   "private": true,
   "dependencies": {
     "@ethersproject/providers": "^5.4.5",
+    "@ethersproject/units": "^5.4.0",
     "@lingui/core": "^3.12.1",
     "@lingui/macro": "^3.12.1",
     "@testing-library/jest-dom": "^5.14.1",

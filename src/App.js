@@ -6,6 +6,7 @@ import { useActiveWeb3React, useEagerConnect, useInactiveListener } from './hook
 import { useEffect, useState } from 'react'
 import { Web3Provider } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
+import { parseUnits } from '@ethersproject/units'
 import ErrorMessage from './transaction/ErrorMessage';
 import TxList from './transaction/TxList'
 
@@ -108,20 +109,24 @@ function App() {
       console.log('check 01')
       await window.ethereum.send("eth_requestAccounts");
 
+
+      console.log('check 02 ether: ' + ether)
+      const value = parseUnits(ether, 18);
+      console.log('Value Hex:' + value)
       // const { account, chainId, library } = useActiveWeb3React()
       // const provider = new Web3Provider(window.ethereum);
       const signer = library.getSigner();
-      console.log('check 02')
-      console.log('GasLimit: ' + BigNumber.from('21000').toHexString())
+      console.log('isZero: ' + isZero(value))
+
       // library.getAddress(addr);
       const tx = signer.sendTransaction({
         from: account,
         to: addr,
-        // gasLimit: BigNumber.from('21000').toHexString(),
-        ...(ether && !isZero(ether) ? { value: BigNumber.from('21000').toHexString(ether) } : {}),
+        gasLimit: BigNumber.from('21000').toHexString(),
+        ...(value && !isZero(value) ? { value } : {}),
       })
       .then((response) => {
-        console.log({ ether, addr });
+        console.log({ value, addr });
         return response.hash
       })
       .catch((error) => {
@@ -130,7 +135,7 @@ function App() {
           throw new Error('Transaction rejected.')
         } else {
           // otherwise, the error was unexpected and we need to convey that
-          console.error(`Demo Trans Failed`, error, addr, ether)
+          console.error(`Demo Trans Failed`, error, addr, value)
 
           throw new Error(`Demo Trans failed: ${swapErrorToUserReadableMessage(error)}`)
         }
