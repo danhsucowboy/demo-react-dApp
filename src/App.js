@@ -3,12 +3,13 @@ import { useWeb3React } from '@web3-react/core'
 import { t } from '@lingui/macro'
 import { injected } from './connector/connector'
 import { useActiveWeb3React, useEagerConnect, useInactiveListener } from './hooks/web3';
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Web3Provider } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { parseUnits } from '@ethersproject/units'
 import ErrorMessage from './transaction/ErrorMessage';
 import TxList from './transaction/TxList'
+import { useTransactionAdder, useAllTransactions, isTransactionRecent } from './state/transactions/hooks';
 
 import './App.css';
 
@@ -47,6 +48,10 @@ function swapErrorToUserReadableMessage(error) {
   }
 }
 
+function newTransactionsFirst(a, b) {
+  return b.addedTime - a.addedTime
+}
+
 function Web3ReactManager({ children }) {
   console.log('check 01')
   const { active } = useWeb3React()
@@ -81,10 +86,26 @@ function Web3ReactManager({ children }) {
 }
 
 function App() {
-
   // const testResult = useActiveWeb3React()
   const { active, account, library, connector, activate, deactivate } = useWeb3React()
   // const contextNetwork = useWeb3React<Web3Provider>('NETWORK')
+  const addTransaction = useTransactionAdder()
+
+  const allTransactions = useAllTransactions()
+
+  const sortedRecentTransactions = useMemo(() => {
+    const txs = Object.values(allTransactions)
+    console.log("All Transactions: " + JSON.stringify(allTransactions))
+    return txs.filter(isTransactionRecent).sort(newTransactionsFirst)
+  }, [allTransactions])
+
+  const pending = sortedRecentTransactions.filter((tx) => !tx.receipt).map((tx) => tx.hash)
+  
+  const hasPendingTransactions = !!pending.length
+
+  useEffect(() => {
+    console.log("Pending: " + JSON.stringify(pending))
+  },[pending])
 
   async function connect() {
     try {
@@ -102,7 +123,7 @@ function App() {
     }
   }
 
-  const startPayment = async ({ setError, setTxs, ether, addr }) => {
+  const startPayment = async ({ setError, setTxs, addTransaction, ether, addr }) => {
     try {
       if (!window.ethereum)
         throw new Error("No crypto wallet found. Please install it.");
@@ -126,8 +147,15 @@ function App() {
         ...(value && !isZero(value) ? { value } : {}),
       })
       .then((response) => {
-        console.log({ value, addr });
-        return response.hash
+        console.log({ value, addr })
+        addTransaction(
+          response,
+          {
+            type: 'Payment',
+            currencyAmount: value.toString()
+          }
+        )
+        // return response.hash
       })
       .catch((error) => {
         // if the user rejected the tx, pass this along
@@ -155,11 +183,13 @@ function App() {
     e.preventDefault();
     const data = new FormData(e.target);
     setError();
+
     await startPayment({
       setError,
       setTxs,
+      addTransaction,
       ether: data.get("ether"),
-      addr: data.get("addr")
+      addr: data.get("addr"),
     });
   };
 
@@ -167,8 +197,20 @@ function App() {
     // <Web3ReactManager>
       <div className="main-div" >
         <button onClick={connect} >Connect to MetaMask</button>
-        {active ? <span>Connected with <b>{account}</b></span> : <span>Not connected</span>}
-        <button onClick={disconnect} >Disconnect</button>
+        {
+          connector ?
+          hasPendingTransactions ? 
+          <div>
+            <span>Pending ... </span>
+          </div>
+          :
+          <div>
+            <span>Connected with </span>
+            <span><b>{account}</b></span>
+          </div>
+          : <span>Not connected</span>
+        }
+        <button onClick={disconnect} >Disconnect</button>｀
 
       <form onSubmit={handleSubmit}>
         <div className="main-div">

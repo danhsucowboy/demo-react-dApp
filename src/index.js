@@ -5,6 +5,10 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { createWeb3ReactRoot, Web3ReactProvider } from '@web3-react/core'
 import { Web3Provider } from '@ethersproject/providers'
+import store from './state';
+import { Provider } from 'react-redux'
+import ApplicationUpdater from './state/application/updater'
+import TransactionUpdater from './state/transactions/updater'
 
 const Web3ProviderNetwork = createWeb3ReactRoot('NETWORK')
 
@@ -14,14 +18,25 @@ function getLibrary(provider) {
   return library
 }
 
+function Updaters() {
+  return (
+    <>
+      <ApplicationUpdater />
+      <TransactionUpdater />
+    </>
+  )
+}
 
 ReactDOM.render(
   <React.StrictMode>
-    <Web3ReactProvider getLibrary={getLibrary}>
-      <Web3ProviderNetwork getLibrary={getLibrary}>
-        <App />
-      </Web3ProviderNetwork>
-    </Web3ReactProvider>
+    <Provider store={store}>
+      <Web3ReactProvider getLibrary={getLibrary}>
+        <Web3ProviderNetwork getLibrary={getLibrary}>
+          <Updaters/>
+          <App />
+        </Web3ProviderNetwork>
+      </Web3ReactProvider>
+    </Provider>
   </React.StrictMode>,
   document.getElementById('root')
 );

@@ -10,8 +10,8 @@ export function useActiveWeb3React() {
     const context = useWeb3React()
     const contextNetwork = useWeb3React<Web3Provider>('NETWORK')
 
-    console.log("Context: "+context)
-    console.log("ContextNetwork: "+contextNetwork)
+    // console.log("Context: "+context)
+    // console.log("ContextNetwork: "+contextNetwork)
 
     return context.active ? context : contextNetwork
 }
