@@ -5,6 +5,13 @@
   align-items: center;
 }
 
+.row-div{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
 .App {
   text-align: center;
 }

@@ -12,6 +12,9 @@ import ErrorMessage from './transaction/ErrorMessage';
 import TxList from './transaction/TxList'
 import { useTransactionAdder, useAllTransactions, isTransactionRecent } from './state/transactions/hooks';
 import { shortenAddress, isAddress } from './utils';
+import styled from 'styled-components'
+import Transaction from './components/accountDetails';
+import { CHAIN_INFO } from './constants/chains';
 
 import './App.css';
 
@@ -54,6 +57,22 @@ function newTransactionsFirst(a, b) {
   return b.addedTime - a.addedTime
 }
 
+const TransactionListWrapper = styled.div`
+  display:flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+`
+
+function renderTransactions(transactions) {
+  return (
+    <TransactionListWrapper>
+      {transactions.map((hash, i) => {
+        return <Transaction key={i} hash={hash} />
+      })}
+    </TransactionListWrapper>
+  )
+}
+
 function Web3ReactManager({ children }) {
   console.log('check 01')
   const { active } = useWeb3React()
@@ -89,9 +108,11 @@ function Web3ReactManager({ children }) {
 
 function App() {
   // const testResult = useActiveWeb3React()
-  const { active, account, library, connector, activate, deactivate } = useWeb3React()
+  const { active, account, library, connector, chainId, activate, deactivate } = useWeb3React()
   const [balance, setBalance] = useState()
   // const contextNetwork = useWeb3React<Web3Provider>('NETWORK')
+  const networkInfo = chainId ? CHAIN_INFO[chainId] : undefined
+
   const addTransaction = useTransactionAdder()
 
   const allTransactions = useAllTransactions()
@@ -103,18 +124,15 @@ function App() {
   }, [allTransactions])
 
   const pending = sortedRecentTransactions.filter((tx) => !tx.receipt).map((tx) => tx.hash)
+  const confirmed = sortedRecentTransactions.filter((tx) => tx.receipt).map((tx) => tx.hash)
 
   useETHBalances(account ? [account] : [], pending, setBalance)
 
   const hasPendingTransactions = !!pending.length
 
-  useEffect(() => {
-    console.log("Pending: " + JSON.stringify(pending))
-  },[pending])
-
   // useEffect(() => {
-  //   console.log("userEthBalance: " + userEthBalance)
-  // },[userEthBalance])
+  //   console.log("networkInfo: " + JSON.stringify(networkInfo))
+  // },[networkInfo])
 
   async function connect() {
     try {
@@ -161,7 +179,9 @@ function App() {
           response,
           {
             type: 'Payment',
-            currencyAmount: value.toString()
+            from: account,
+            to: addr,
+            currencyAmount: ether
           }
         )
         // return response.hash
@@ -206,12 +226,17 @@ function App() {
     // <Web3ReactManager>
       <div className="main-div" >
         <button onClick={connect} >Connect to MetaMask</button>
-        { connector? 
-          balance ?
+        <br/>
+        { connector && networkInfo? 
           <div>
-            <span> {balance?.slice(0,9)} ETH</span>
+            <span>{networkInfo.label}</span>
           </div>
           : null
+        }
+        { connector && balance ?
+          <div>
+            <span>{balance?.slice(0,9)} ETH</span>
+          </div>
           : null
         }
         {
@@ -229,21 +254,7 @@ function App() {
           </div>
           : <span>Not connected</span>
         }
-        {/* {
-          connector ?
-          hasPendingTransactions ? 
-          <div>
-            <span>Pending ... </span>
-          </div>
-          :
-          <div className="main-div">
-            <div>
-              <span>Connected with </span>
-              <span><b>{shortenAddress(account)}</b></span>
-            </div>
-          </div>
-          : <span>Not connected</span>
-        } */}
+        <br/>
         <button onClick={disconnect} >Disconnect</button>｀
 
         <form onSubmit={handleSubmit}>
@@ -281,9 +292,18 @@ function App() {
         </div>
       </form>
 
-        <div>
-          <h1>Recent Transactions</h1>
-          {}
+        <div className="main-div">
+          {!!pending.length || !!confirmed.length ?(
+            <>
+              <h1>Recent Transactions</h1>
+              {renderTransactions(pending)}
+              {renderTransactions(confirmed)}
+            </>
+          ):
+            <>
+              <h3>Your transactions will appear here...</h3>
+            </>
+          }
         </div>
 
       </div>
