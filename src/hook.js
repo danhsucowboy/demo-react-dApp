@@ -1,79 +1,39 @@
-import {useState, useEffect} from 'react'
-import { Web3Provider } from '@ethersproject/providers'
-import { useWeb3React } from '@web3-react/core'
-import { injected } from './connector/connector'
+import { useMemo, useState } from 'react'
+import { useActiveWeb3React } from './hooks/web3'
+import { isAddress } from './utils'
+import { formatEther } from '@ethersproject/units'
+import { getDefaultProvider } from '@ethersproject/providers'
 
-// export function useActiveWeb3React() {
-//     const context = useWeb3React<Web3Provider>()
-//     const contextNetwork = useWeb3React<Web3Provider>()
+export function useETHBalances(uncheckedAddresses, pending, setBalance) {
+  const { library, chainId } = useActiveWeb3React()
 
-// }
+  const addresses = useMemo(
+    () =>
+      uncheckedAddresses
+        ? uncheckedAddresses
+            .map(isAddress)
+            .filter((a) => a !== false)
+            .sort()
+        : [],
+    [uncheckedAddresses]
+  )
 
-export function useEagerConnect() {
-    const { activate, active } = useWeb3React()
-  
-    const [tried, setTried] = useState(false)
-  
-    useEffect(() => {
-      injected.isAuthorized().then((isAuthorized) => {
-        if (isAuthorized) {
-          activate(injected, undefined, true).catch(() => {
-            setTried(true)
-          })
-        } else {
-          setTried(true)
-        }
+  const getBalance = async ({library, addresses, chainId}) => {
+    if (library && addresses[0]) {
+      const provider = getDefaultProvider(chainId)
+      provider.getBalance(addresses[0]).then((balance) => {
+        // console.log('check01')
+        const balanceInEth = formatEther(balance)
+        setBalance(balanceInEth)
       })
-    }, []) // intentionally only running on mount (make sure it's only mounted once :))
-  
-    // if the connection worked, wait until we get confirmation of that to flip the flag
-    useEffect(() => {
-      if (!tried && active) {
-        setTried(true)
-      }
-    }, [tried, active])
-  
-    return tried
+      .catch((err) => { console.log(err) })
+    }
   }
-  
-  export function useInactiveListener(suppress = false) {
-    const { active, error, activate } = useWeb3React()
-  
-    useEffect(() => {
-      const { ethereum } = window
-      if (ethereum && ethereum.on && !active && !error && !suppress) {
-        const handleConnect = () => {
-          console.log("Handling 'connect' event")
-          activate(injected)
-        }
-        const handleChainChanged = (chainId) => {
-          console.log("Handling 'chainChanged' event with payload", chainId)
-          activate(injected)
-        }
-        const handleAccountsChanged = (accounts) => {
-          console.log("Handling 'accountsChanged' event with payload", accounts)
-          if (accounts.length > 0) {
-            activate(injected)
-          }
-        }
-        const handleNetworkChanged = (networkId) => {
-          console.log("Handling 'networkChanged' event with payload", networkId)
-          activate(injected)
-        }
-  
-        ethereum.on('connect', handleConnect)
-        ethereum.on('chainChanged', handleChainChanged)
-        ethereum.on('accountsChanged', handleAccountsChanged)
-        ethereum.on('networkChanged', handleNetworkChanged)
-  
-        return () => {
-          if (ethereum.removeListener) {
-            ethereum.removeListener('connect', handleConnect)
-            ethereum.removeListener('chainChanged', handleChainChanged)
-            ethereum.removeListener('accountsChanged', handleAccountsChanged)
-            ethereum.removeListener('networkChanged', handleNetworkChanged)
-          }
-        }
-      }
-    }, [active, error, suppress, activate])
-  }
+
+  return useMemo(
+    () => {
+      getBalance({library, addresses, chainId})
+    },
+    [library, chainId, pending]
+  )
+}

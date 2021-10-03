@@ -50,7 +50,7 @@ export default function Updater() {
                     library.getTransactionReceipt(hash).then((receipt) => {
                         if (receipt === null) {
                             console.debug('Retrying for hash', hash)
-                            throw new RetryableError()
+                            throw new RetryableError() //An error to remain keep checking the receipt
                         }
                         return receipt
                     }),

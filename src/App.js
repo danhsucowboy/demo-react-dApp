@@ -4,12 +4,14 @@ import { t } from '@lingui/macro'
 import { injected } from './connector/connector'
 import { useActiveWeb3React, useEagerConnect, useInactiveListener } from './hooks/web3';
 import { useEffect, useMemo, useState } from 'react'
-import { Web3Provider } from '@ethersproject/providers'
+import { useETHBalances } from './hook';
+// import { Web3Provider } from '@ethersproject/providers'
 import { BigNumber } from '@ethersproject/bignumber'
 import { parseUnits } from '@ethersproject/units'
 import ErrorMessage from './transaction/ErrorMessage';
 import TxList from './transaction/TxList'
 import { useTransactionAdder, useAllTransactions, isTransactionRecent } from './state/transactions/hooks';
+import { shortenAddress, isAddress } from './utils';
 
 import './App.css';
 
@@ -88,6 +90,7 @@ function Web3ReactManager({ children }) {
 function App() {
   // const testResult = useActiveWeb3React()
   const { active, account, library, connector, activate, deactivate } = useWeb3React()
+  const [balance, setBalance] = useState()
   // const contextNetwork = useWeb3React<Web3Provider>('NETWORK')
   const addTransaction = useTransactionAdder()
 
@@ -100,12 +103,18 @@ function App() {
   }, [allTransactions])
 
   const pending = sortedRecentTransactions.filter((tx) => !tx.receipt).map((tx) => tx.hash)
-  
+
+  useETHBalances(account ? [account] : [], pending, setBalance)
+
   const hasPendingTransactions = !!pending.length
 
   useEffect(() => {
     console.log("Pending: " + JSON.stringify(pending))
   },[pending])
+
+  // useEffect(() => {
+  //   console.log("userEthBalance: " + userEthBalance)
+  // },[userEthBalance])
 
   async function connect() {
     try {
@@ -197,6 +206,14 @@ function App() {
     // <Web3ReactManager>
       <div className="main-div" >
         <button onClick={connect} >Connect to MetaMask</button>
+        { connector? 
+          balance ?
+          <div>
+            <span> {balance?.slice(0,9)} ETH</span>
+          </div>
+          : null
+          : null
+        }
         {
           connector ?
           hasPendingTransactions ? 
@@ -204,15 +221,32 @@ function App() {
             <span>Pending ... </span>
           </div>
           :
-          <div>
-            <span>Connected with </span>
-            <span><b>{account}</b></span>
+          <div className="main-div">
+            <div>
+              <span>Connected with </span>
+              <span><b>{shortenAddress(account)}</b></span>
+            </div>
           </div>
           : <span>Not connected</span>
         }
+        {/* {
+          connector ?
+          hasPendingTransactions ? 
+          <div>
+            <span>Pending ... </span>
+          </div>
+          :
+          <div className="main-div">
+            <div>
+              <span>Connected with </span>
+              <span><b>{shortenAddress(account)}</b></span>
+            </div>
+          </div>
+          : <span>Not connected</span>
+        } */}
         <button onClick={disconnect} >Disconnect</button>｀
 
-      <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit}>
         <div className="main-div">
           <main>
             <h1>
@@ -247,6 +281,10 @@ function App() {
         </div>
       </form>
 
+        <div>
+          <h1>Recent Transactions</h1>
+          {}
+        </div>
 
       </div>
     // </Web3ReactManager>
